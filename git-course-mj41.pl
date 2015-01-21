@@ -1077,7 +1077,7 @@ $sc->add_slide(
 	'git remote - origin',
 	cmd_sub => sub {
 		pc cd $base_dir.'/repo-MJ', where_to_print => '~/'.$course_dir.'/repo-MJ';
-		pc cmdo "git remote add origin file:///home/rd/git-tut/git-tut-origin";
+		pc cmdo "git remote add origin file:///$base_dir/git-tut-origin";
 		pc cmdo 'git push origin HEAD';
 		pc cmdo q!git log --decorate --oneline!;
 	},
@@ -1097,7 +1097,7 @@ $sc->add_slide(
 	'[Pepa] git clone 1/2',
 	cmd_sub => sub {
 		pc cd $base_dir, where_to_print => '~/'.$course_dir;
-		pc cmdo q!git clone file:///home/rd/git-tut/git-tut-origin repo-Pepy!;
+		pc cmdo "git clone file://$base_dir/git-tut-origin repo-Pepy";
 		pc cd 'repo-Pepy';
 		pc cmdo 'git remote -v';
 		pc cmdo 'ls';
