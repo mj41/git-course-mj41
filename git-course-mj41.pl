@@ -154,7 +154,6 @@ $sc->add_slide(
 -------
 
 * complexity - commit/push, checkout/clone
-* fetch the whole repository history (once)
 * no subtree of repository checkout
 * no sequentially revision numbers
 
