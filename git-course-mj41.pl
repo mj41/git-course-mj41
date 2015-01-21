@@ -1221,7 +1221,7 @@ $sc->add_slide(
 * <a href="http://git-scm.com/">git-scm.com</a>
 * Pro Git, Scott Chacon
  * license <a href="http://creativecommons.org/licenses/by/3.0/deed.cs" title="Creative Commons Attribution 3.0 Unported">CC BY 3.0</a>
- * <a href="knihy.nic.cz">knihy.nic.cz</a> - Czech version
+ * <a href="knihy.nic.cz">knihy.nic.cz</a> - Czech translation
 * <a href="http://ndpsoftware.com/git-cheatsheet.html">git-cheatsheet</a>
 MD_END
 );
