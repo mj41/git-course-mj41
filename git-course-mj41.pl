@@ -17,8 +17,7 @@ my $sleep_mult = (defined $ARGV[1]) ? $ARGV[1] : 1;
 my $verbose_level = $ARGV[2] // 3;
 
 my $temp_user_name = 'linus';
-my $course_dir = 'prbuilder';
-
+my $course_dir = 'git-tt';
 
 my $sc = Presentation::Builder::SlideCollection::Reveal->new(
 	title => 'Git',
@@ -51,7 +50,10 @@ die "No user '$temp_user_name' but '$whoami'.\n" unless $whoami eq $temp_user_na
 
 my $home_dir = '/home/'.$temp_user_name;
 my $base_dir = $home_dir . '/' . $course_dir;
-my $tmp_dir = $home_dir . '/' . $course_dir . '/temp';
+$base_dir .= '-' . time() . '-' . $$ if -d $base_dir;
+mkdir($base_dir);
+my $tmp_dir = $home_dir . '/' . $course_dir . '-temp';
+mkdir($tmp_dir);
 
 die "Directory '$base_dir' not found." unless -d $base_dir;
 
@@ -66,19 +68,13 @@ my $run_env = Presentation::Builder::RunEnv->new(
 );
 
 $sc->add_slide(
-	'Git',
+	'Git FS',
 	markdown => <<'MD_END',
 > "I really really designed it coming at the problem from the viewpoint
 > of a filesystem person (hey, kernels is what I do), and I actually have
 > absolutely zero interest in creating a traditional SCM system."
-> -- Linus Torvals
 
------
-
-* a content-addressable filesystem
-* manages tree snapshots (joined by commits) over time
-* distributed version control system
-
+-- Linus Torvals
 MD_END
 	notes => <<'MD_NOTES',
 * Linus Torvals - absolutely zero interest in creating a traditional SCM system
@@ -92,9 +88,19 @@ MD_NOTES
 );
 
 $sc->add_slide(
+	'Git',
+	markdown => <<'MD_END',
+* a content-addressable filesystem
+* manages tree snapshots (joined by commits) over time
+* distributed version control system
+MD_END
+);
+
+
+$sc->add_slide(
 	'Why Git? Linux',
 	markdown => <<'MD_END',
-* 2002 - 2005 proprietary BitKeeper (email, Apr 5, 2005)
+* 2002 - 2005 proprietary BitKeeper
 * Apr 7, Linus Torvals - based on BitKeeper concepts
 
         Msg:    Initial revision of "git", the information manager
@@ -103,7 +109,6 @@ $sc->add_slide(
         Date:   Thu Apr 7 15:13:13 2005 -0700
         Files:  cat-file.c, commit-tree.c, show-diff.c, ...
 
-* designed as a low-level version control system engine
 * May 26 - Linux 2.6.12 - the first release with Git
 * December 21 - Git 1.0
 MD_END
@@ -134,10 +139,11 @@ $sc->add_slide(
 * 72 days since 3.1.
  * 11,881 patches, 6.88 per hour
  * 1,316 developers from 226 organizations
-* since 2005 - 7,944 developers from 855 organizations
-* Red Hat, Intel, Novell, IBM, TI, Broadcom, Nokia, Samsung, Oracle and Google, ... , Microsoft (number 17)
+* 2005-2015
+ * 12,000 developers from 1200 organizations
 MD_END
 	notes => <<'MD_NOTES',
+* http://www.linuxfoundation.org/news-media/announcements/2015/02/linux-foundation-releases-linux-development-report
 * subsystem trees - be SCSI drivers, x86 architecture code, or networking - “Signed-off-by”
 * 75% – The share of all kernel development that is done by developers who are being paid for their work.
 * More than 7,800 developers from almost 800 different companies have contributed to the Linux kernel since tracking began in 2005
@@ -149,7 +155,7 @@ $sc->add_slide(
 	markdown => <<'MD_END',
 * permissions, ownership, empty directories, ...
 * individual files (not project's files)
-* large binary files
+* large binary files ([GitHub: Git LFS](https://github.com/blog/1986-announcing-git-large-file-storage-lfs))
 
 -------
 
@@ -221,7 +227,7 @@ $sc->add_slide(
 	sub {
 		pc cmdo 'rm .git/hooks/*', no => 1;
 		pc cmdo 'tree -aF .git';
-		pc cmdo "tree -aF .git > $tmp_dir/tree-empty.out", no => 1;
+		pc cmdo "tree --noreport -aF .git > $tmp_dir/tree-empty.out", no => 1;
 		# pc cmdo 'cat .git/HEAD';
 	}
 );
@@ -250,10 +256,11 @@ MD_NOTES
 # todo
 $sc->add_slide(
 	'The three trees 2/2',
-	sub {
+	cmd_sub => sub {
 		# todo
 		ar img 'flow.svg', '400px';
-	}
+	},
+	header => 0,
 );
 
 $sc->add_slide(
@@ -323,42 +330,82 @@ MD_NOTES
 );
 
 $sc->add_slide(
-	'.git after index change 1/3',
+	'.git after index change 1/4',
 	sub {
+		pc cmdo 'find .git/objects -type f';
 		pc cmdo 'git add fileA.txt';
+		pc cmdo 'find .git/objects -type f';
 		pc cmdo 'tree -aF .git', no_out => 1;
-		pc cmdo "tree -aF .git > $tmp_dir/tree-index.out", no => 1;
-		pc cmdo "diff --side --expand-tabs --width 74 $tmp_dir/tree-empty.out $tmp_dir/tree-index.out | grep -B 30 -A 2 'refs/'", no_cmd => 1;
 	}
 );
 
 $sc->add_slide(
-	'.git after index change 2/3',
+	'.git after index change 2/4',
 	sub {
-		pc cmdo 'find .git/objects -type f';
+		pc cmdo "tree --noreport -aF .git > $tmp_dir/tree-index.out", no => 1;
+		pc cmdo "diff --side --expand-tabs --width 55 $tmp_dir/tree-empty.out $tmp_dir/tree-index.out", no_cmd => 1;
+	}
+);
+
+$sc->add_slide(
+	'.git after index change 3/4',
+	sub {
 		my $fpath = pc cmdo 'find .git/objects -type f | head -n1', no => 1;
-		pc cmdo 'git help cat-file | head -6 | tail -2', no_cmd => 1;
+		pc cmdo "hexdump $fpath | head -n1";
+		pc cmdo 'git help cat-file | head -6 | tail -1', no_cmd => 1;
 		my $blob_sha1 = pc cmdo 'git hash-object fileA.txt', no => 1;
 		pc cmdo "git cat-file -p $blob_sha1";
 		pc cmdo "git cat-file -t $blob_sha1";
 		pc cmdo "git cat-file -s $blob_sha1";
-		pc cmdo "hexdump $fpath | head -n1";
 	}
 );
 
 $sc->add_slide(
-	'Objects - blob, tree, commit, tag',
+	'.git after index change 4/4',
+	sub {
+		my $blob_sha1 = pc cmdo 'git hash-object fileA.txt';
+		pc cmdo "git cat-file -t $blob_sha1";
+		pc cmdo 'file .git/index';
+		pc cmdo 'git ls-files --cached';
+		pc cmdo 'find .git/objects -type f | head -n 5';
+	}
+);
+
+$sc->add_slide(
+	'Git objects',
+	markdown => <<'MD_END',
+* blob
+* tree
+* commit
+* tag
+MD_END
+);
+
+$sc->add_slide(
+	'Git objects: blob, tree',
 	markdown => <<'MD_END',
 * a blob object - content of a file
  * no file name, time stamps, or other metadata
 * a tree object - the equivalent of a directory
  * describes a snapshot of the source tree
  * names of blob and tree objects (type bits)
+MD_END
+);
+
+$sc->add_slide(
+	'Git objects: commit',
+	markdown => <<'MD_END',
 * a commit object
  * links tree objects together into a history
  * the name of a tree object (of the top-level source directory)
  * a time stamp, a log message
  * the names of zero or more parent commit objects
+MD_END
+);
+
+$sc->add_slide(
+	'Git objects: tag',
+	markdown => <<'MD_END',
 * a tag object
  * a container that contains reference to another object
  * and can hold additional meta-data
@@ -366,15 +413,13 @@ MD_END
 );
 
 $sc->add_slide(
-	'.git after index change 3/3',
-	sub {
-		my $blob_sha1 = pc cmdo 'git hash-object fileA.txt';
-		pc cmdo "git cat-file -t $blob_sha1";
-		pc cmdo 'file .git/index';
-		pc cmdo 'git ls-files --cached';
-		pc cmdo 'find .git/objects -type f';
-	}
+	'Git objects: Graph example',
+	cmd_sub => sub {
+		ar img 'data-model-3.png';
+	},
+	header => 0,
 );
+
 
 $sc->add_slide(
 	'First commit (attempt)',
@@ -441,17 +486,18 @@ $sc->add_slide(
 
 $sc->add_slide(
 	'Git file status',
-	sub {
+	cmd_sub => sub {
 		ar img 'files-lifecycle.png', '800px';
-	}
+	},
+	header => 0,
 );
 
 $sc->add_slide(
 	'.git after first commit 1/5',
 	sub {
 		pc cmdo 'tree -aF .git', no_out => 1;
-		pc cmdo "tree -aF .git > $tmp_dir/tree-commit.out", no => 1;
-		pc cmdo "diff --side --expand-tabs --width 74 $tmp_dir/tree-index.out $tmp_dir/tree-commit.out > $tmp_dir/diff-commit.out", no => 1;
+		pc cmdo "tree --noreport -aF .git > $tmp_dir/tree-commit.out", no => 1;
+		pc cmdo "diff --side --expand-tabs --width 55 $tmp_dir/tree-index.out $tmp_dir/tree-commit.out > $tmp_dir/diff-commit.out", no => 1;
 		pc cmdo "grep -B 100 'objects/' $tmp_dir/diff-commit.out", no_cmd => 1;
 	}
 );
@@ -503,11 +549,17 @@ $sc->add_slide(
 );
 
 $sc->add_slide(
-	'.gitignore',
+	'.gitignore 1/2',
 	sub {
 		pc cmdo 'touch tempf.tmp';
 		pc cmdo 'mkdir -p tmp ; touch tmp/tf.txt';
 		pc cmdo 'git status --short';
+	}
+);
+
+$sc->add_slide(
+	'.gitignore 2/2',
+	sub {
 		pc cmdo q!echo 'tmp/' > .gitignore!;
 		pc cmdo q!echo '*.tmp' >> .gitignore!;
 		pc cmdo 'git status --short';
@@ -529,18 +581,24 @@ $sc->add_slide(
 );
 
 $sc->add_slide(
-	'Third commit 1/2',
+	'Third commit 1/3',
 	sub {
 		pc cmdo 'echo "textB line 2" >> fileB.txt';
 		pc cmdo 'cat fileB.txt';
 		pc cmdo 'mkdir dirH';
 		pc cmdo 'echo "textHC line 1" > dirH/fileHC.txt';
+	}
+);
+
+$sc->add_slide(
+	'Third commit 2/3',
+	sub {
 		pc cmdo 'git status';
 	}
 );
 
 $sc->add_slide(
-	'Third commit 2/2',
+	'Third commit 3/3',
 	sub {
 		pc cmdo 'git add fileB.txt';
 		pc cmdo 'git add dirH';
@@ -568,7 +626,7 @@ $sc->add_slide(
 # sl3 +parent commit
 # sl4 links to files
 
-my $cat_tree_name_c4 = 'cat tree (the real one)';
+my $cat_tree_name_c4 = 'cat tree (the real one) 1/2';
 $sc->add_slide(
 	$cat_tree_name_c4,
 	sub {
@@ -584,13 +642,27 @@ $sc->add_slide(
 		$out = pc cmdo "git cat-file -p $dirH_tree_sha1";
 		my ( $fileA_blob_sha1 ) = $out =~ m{blob ([a-f0-9]{40})\tfileHC\.txt}m;
 
-		pc cmdo "git cat-file -t $fileA_blob_sha1";
-		pc cmdo "git cat-file -p $fileA_blob_sha1";
 		return {
 			fileA_blob_sha1 => $fileA_blob_sha1,
 		};
 	}
 );
+
+
+$sc->add_slide(
+	'cat tree (the real one) 2/2',
+	cmd_sub => sub {
+		my $pars = shift;
+		my $fileA_blob_sha1 = $pars->{all_results}{$cat_tree_name_c4}{fileA_blob_sha1};
+		pc cmdo "git cat-file -t $fileA_blob_sha1";
+		pc cmdo "git cat-file -p $fileA_blob_sha1";
+	},
+	notes => <<'MD_NOTES',
+* index is prepared from HEAD
+MD_NOTES
+);
+
+
 
 $sc->add_slide(
 	'Cryptographic',
@@ -613,8 +685,7 @@ $sc->add_slide(
 		pc cmdo 'git status --short';
 		pc cmdo 'git ls-files -s';
 		pc cmdo 'echo "textHC line 3" >> dirH/fileHC.txt';
-		pc cmdo "git add -A";
-		pc cmdo 'git status --short';
+		pc cmdo 'git add -A ; git status --short';
 		pc cmdo 'git ls-files -s';
 	},
 	notes => <<'MD_NOTES',
@@ -667,25 +738,26 @@ $sc->add_slide(
 	sub {
 		pc cmdo 'find .git/objects -type f | wc -l';
 		pc cmdo 'du -hs .git/objects';
-		pc cmdo 'find .git/objects -type f';
+		pc cmdo 'find .git/objects -type f | head -n 10';
 	}
 );
 
 $sc->add_slide(
 	'git gc 1/2',
 	sub {
-		my $pars = shift;
 		pc cmdo 'git gc --aggressive --prune';
 		pc cmdo 'tree -aF .git/objects';
 		pc cmdo 'du -hs .git/objects';
-		my $fileA_blob_sha1 = $pars->{all_results}{$cat_tree_name_c4}{fileA_blob_sha1};
-		pc cmdo "git cat-file -p $fileA_blob_sha1";
 	}
 );
 
 $sc->add_slide(
 	'git gc 2/2',
 	sub {
+		my $pars = shift;
+		my $fileA_blob_sha1 = $pars->{all_results}{$cat_tree_name_c4}{fileA_blob_sha1};
+		pc cmdo "git cat-file -p $fileA_blob_sha1";
+
 		pc cmdo 'tree -aF .git/refs';
 		pc cmdo 'cat .git/packed-refs';
 	}
@@ -694,9 +766,8 @@ $sc->add_slide(
 $sc->add_slide(
 	'add after git gc',
 	sub {
-		pc cmdo 'echo "textA line 2" >> fileA.txt';
-		pc cmdo 'git add -A';
-		pc cmdo "tree -aF .git | grep -A 15 'objects/'";
+		pc cmdo 'echo "textA line 2" >> fileA.txt ; git add -A';
+		pc cmdo "tree --noreport -aF .git | grep -A 100 'objects/'";
 	}
 );
 
@@ -746,7 +817,7 @@ $sc->add_slide(
 );
 
 $sc->add_slide(
-	'revisions - &lt;rev> 1/2',
+	'revisions - &lt;rev> 1/3',
 	cmd_sub => sub {
 		my $pars = shift;
 		my $firts_short7_sha1 = $pars->{all_results}{$first_sha_name}{firts_short7_sha1};
@@ -768,17 +839,29 @@ MD_NOTES
 );
 
 $sc->add_slide(
-	'revisions - &lt;rev> 2/2',
+	'revisions - &lt;rev> 2/3',
 	cmd_sub => sub {
 		my $pars = shift;
 		my $firts_short7_sha1 = $pars->{all_results}{$first_sha_name}{firts_short7_sha1};
 		ap markdown => <<"MD_END";
-* &lt;rev>~&lt;n> - e.g. master~3
-* &lt;rev>:&lt;path>, e.g. HEAD:dirH/fileHC.txt
+&lt;rev>~&lt;n> - e.g. master~3
 MD_END
 		pc cmdo 'git log -n3 --oneline --decorate';
-		pc cmdo 'git rev-parse --short master';
-		pc cmdo 'git rev-parse --short HEAD~2';
+		pc cmdo 'git rev-parse --short HEAD ; git rev-parse --short HEAD';
+		my $head2_sha1 = pc cmdo 'git rev-parse --short HEAD~2';
+		pc cmdo "git cat-file -t $head2_sha1";
+	},
+	notes => <<'MD_NOTES',
+* no for ranges
+MD_NOTES
+);
+
+$sc->add_slide(
+	'revisions - &lt;rev> 3/3',
+	cmd_sub => sub {
+		ap markdown => <<"MD_END";
+&lt;rev>:&lt;path>, e.g. HEAD:dirH/fileHC.txt
+MD_END
 		my $tree_sha1 = pc cmdo 'git rev-parse --short HEAD~1:dirH/fileHC.txt';
 		pc cmdo "git cat-file -t $tree_sha1";
 	},
@@ -788,7 +871,7 @@ MD_NOTES
 );
 
 $sc->add_slide(
-	'revisions ranges 1/2',
+	'revisions ranges 1/3',
 	cmd_sub => sub {
 		my $pars = shift;
 		ap markdown => <<"MD_END";
@@ -805,9 +888,8 @@ MD_NOTES
 );
 
 $sc->add_slide(
-	'revisions ranges 2/2',
+	'revisions ranges 2/3',
 	cmd_sub => sub {
-		my $pars = shift;
 		ap markdown => <<'MD_END';
 * &lt;rev1>..&lt;rev2>
  * include commits reachable from &lt;rev2>
@@ -816,6 +898,15 @@ $sc->add_slide(
  * include commits reachable from either &lt;rev1> or &lt;rev2>
  * exclude reachable from both
 MD_END
+	},
+	notes => <<'MD_NOTES',
+* ...
+MD_NOTES
+);
+
+$sc->add_slide(
+	'revisions ranges 3/3',
+	cmd_sub => sub {
 		pc cmdo q|git log 'master^{/01}'..'master^{/03}' --oneline|;
 		pc cmdo q|git log 'master^{/03}'...'master^{/01}' --oneline|;
 	},
@@ -829,14 +920,23 @@ $sc->add_slide(
 	cmd_sub => sub {
 		ap markdown => <<'MD_END';
 * look for specified patterns in the tracked files
- * in the work tree,
- * blobs registered in the index file, or
+ * in the work tree
  * blobs in given tree objects
 MD_END
 		pc cmdo q[git grep -n 'line 3'];
+		pc cmdo q[git grep -n -e 'line 2' HEAD~1 HEAD~2];
+	},
+);
+
+$sc->add_slide(
+	'git grep --cached',
+	cmd_sub => sub {
+		ap markdown => <<'MD_END';
+* look for specified patterns in the tracked files
+ * blobs registered in the index file
+MD_END
 		pc cmdo q[git grep -n --cached 'line 3'];
 		pc cmdo q[git grep -n --cached 'line 2'];
-		pc cmdo q[git grep -n -e 'line 2' HEAD~1];
 	},
 );
 
@@ -852,20 +952,24 @@ MD_END
 );
 
 $sc->add_slide(
-	'git log -S &lt;string>',
-	cmd_sub => sub {
-		ap markdown => <<'MD_END';
+	'git log -S &lt;string> 1/2',
+    markdown => <<'MD_END',
 * ... introduce or remove an instance of &lt;string>
 * gitk -S &lt;string>
 MD_END
-		my $out = pc cmdo q[git log -S 'line 2' --oneline];
-		my ( $sha1 ) = $out =~ /^\s*([^\s+]+)/;
-		pc cmdo "git show $sha1";
-	},
 	notes => <<'MD_NOTES',
 * not the string simply appearing in diff output
  * see gitdiffcore(7) search pickaxe
 MD_NOTES
+);
+
+$sc->add_slide(
+	'git log -S &lt;string> 2/2',
+	cmd_sub => sub {
+		my $out = pc cmdo q[git log -S 'line 2' --oneline];
+		my ( $sha1 ) = $out =~ /^\s*([^\s+]+)/;
+		pc cmdo "git show $sha1";
+	},
 );
 
 $sc->add_slide(
@@ -921,7 +1025,7 @@ MD_END
 
 $sc->add_slide(
 	'git checkout/reset -- files',
-	cmd_sub => sub {
+	sub {
 		ar img 'basic-usage.svg';
 	}
 );
@@ -1044,10 +1148,10 @@ $sc->add_slide(
 
 $sc->add_slide(
 	'Remote repositories',
-	sub {
-		# todo - again
+	cmd_sub => sub {
 		ar img 'flow.svg', '400px';
-	}
+	},
+	header => 0,
 );
 
 $sc->add_slide(
@@ -1077,7 +1181,7 @@ $sc->add_slide(
 	'git remote - origin',
 	cmd_sub => sub {
 		pc cd $base_dir.'/repo-MJ', where_to_print => '~/'.$course_dir.'/repo-MJ';
-		pc cmdo "git remote add origin file:///$base_dir/git-tut-origin";
+		pc cmdo "git remote add origin file://$base_dir/git-tut-origin";
 		pc cmdo 'git push origin HEAD';
 		pc cmdo q!git log --decorate --oneline!;
 	},
@@ -1088,7 +1192,7 @@ $sc->add_slide(
 	cmd_sub => sub {
 		pc cd $base_dir.'/repo-MJ', where_to_print => '~/'.$course_dir.'/repo-MJ';
 		pc cmdo "git remote -v";
-		pc cmdo 'git help fetch | head -7 | tail -3', no_cmd => 1;
+		pc cmdo 'git help fetch | head -7 | tail -2', no_cmd => 1;
 		pc cmdo 'git fetch';
 	},
 );
@@ -1125,6 +1229,12 @@ $sc->add_slide(
 		pc cd $base_dir.'/repo-MJ', where_to_print => '../repo-MJ';
 		pc cmdo q!git remote add upstream git@github.com:mj41/git-fsdvcs-up.git!;
 		pc cmdo q!git fetch upstream!, no_run => 1;
+	},
+);
+
+$sc->add_slide(
+	'git remote - configuration',
+	cmd_sub => sub {
 		pc cmdo q!git remote -v!;
 		pc cmdo q!git config --local --list | grep remote!;
 	},
@@ -1160,13 +1270,19 @@ $sc->add_slide(
 );
 
 $sc->add_slide(
-	'git reset --hard origin/...',
+	'git reset --hard origin/... 1/2',
 	cmd_sub => sub {
 		pc cd $base_dir.'/repo-MJ', where_to_print => '../repo-MJ';
 		pc cmdo q!git checkout master!;
-		pc cmdo q!git log --decorate --oneline --all --graph | head -n4!;
+		pc cmdo q!git log --decorate --oneline --all --graph | head -n5!;
+	},
+);
+
+$sc->add_slide(
+	'git reset --hard origin/... 2/2',
+	cmd_sub => sub {
 		pc cmdo q!git reset --hard origin/BRnp!;
-		pc cmdo q!git log --decorate --oneline --all --graph | head -n4!;
+		pc cmdo q!git log --decorate --oneline --all --graph | head -n5!;
 		pc cmdo q!git push origin HEAD!;
 	},
 );
@@ -1198,7 +1314,7 @@ MD_END
 );
 
 $sc->add_slide(
-	'Git more',
+	'Git more 1/2',
 	markdown => <<'MD_END',
 * git clean
 * git commit --amend
@@ -1207,10 +1323,18 @@ $sc->add_slide(
 * git cherry-pick
 * git revert
 * git tag
-* git reflog
-* git gc, git fsck
+MD_END
+);
+
+$sc->add_slide(
+	'Git more 2/2',
+	markdown => <<'MD_END',
 * git bisec
+* git reflog
 * git filter-branch
+* git gc
+* git fsck
+* ...
 MD_END
 );
 
@@ -1229,15 +1353,16 @@ MD_END
 $sc->add_slide(
 	'Thank you',
 	markdown => <<'MD_END',
-Michal Jurosz (mj41)
-<br><br>
-<small><a href="http://www.gooddata.com" target="_blank">www.GoodData.com</a></small>
-<br><br>
-<small>Presentation generated by [github.com/mj41/prbuilder-docker](https://github.com/mj41/prbuilder-docker)<br>
-from [github.com/mj41/git-course-mj41](https://github.com/mj41/git-course-mj41) source and<br>
-powered by [github.com/hakimel/reveal.js](https://github.com/hakimel/reveal.js).
-</small>
-
+Michal Jurosz (mj41)<br />
+<small>[www.GoodData.com](https://www.goodgata.com)</small>
+<br />
+<p><small>
+Generated from <a href="https://github.com/mj41/git-course-mj41">github.com/mj41/git-course-mj41</a> source<br />
+by <a href="https://github.com/mj41/Presentation-Builder">Presentation::Builder</a>
+ inside <a href="https://github.com/mj41/prbuilder-docker">prbuilder Docker container</a>.<br />
+<br />
+Powered by <a href="https://github.com/hakimel/reveal.js">reveal.js</a>.<br />
+</small></p>
 MD_END
 );
 
