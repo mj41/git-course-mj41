@@ -19,12 +19,23 @@ my $verbose_level = $ARGV[2] // 3;
 my $temp_user_name = 'linus';
 my $course_dir = 'git-tt';
 
+my @lt = localtime(time);
+my $gen_date = $lt[3].'.'.($lt[4] + 1).'.'.($lt[5] + 1900);
+
+my $rev_struct = cmdo( "cd $FindBin::RealBin; git rev-parse HEAD", no => 1 );
+my $src_sha1 = $rev_struct->{out};
+my $src_url = "https://github.com/mj41/git-course-mj41/commits/$src_sha1/git-course-mj41.pl";
+my $first_slide_suffix_html =
+	  '<small>by <a href="http://mj41.cz">Michal Jurosz (mj41)</a><br />'
+	. qq|generated: <a href="$src_url">$gen_date</a><br /></small>|;
+
 my $sc = Presentation::Builder::SlideCollection::Reveal->new(
 	title => 'Git',
 	subtitle => '(FS and DVCS)',
 	author => 'Michal Jurosz (mj41)',
 	author_url => 'http://mj41.cz',
-	date => 'Jan 2015 (v6)',
+	date => $gen_date,
+	first_slide_suffix_html => $first_slide_suffix_html,
 	revealjs_dir => File::Spec->catdir( $FindBin::RealBin, '..', 'third-part', 'reveal.js' ),
 	out_fpath => File::Spec->catfile( $FindBin::RealBin, '..', 'final-slides', 'index.html' ),
 	sleep_mult => $sleep_mult,
@@ -50,9 +61,14 @@ die "No user '$temp_user_name' but '$whoami'.\n" unless $whoami eq $temp_user_na
 
 my $home_dir = '/home/'.$temp_user_name;
 my $base_dir = $home_dir . '/' . $course_dir;
-$base_dir .= '-' . time() . '-' . $$ if -d $base_dir;
-mkdir($base_dir);
 my $tmp_dir = $home_dir . '/' . $course_dir . '-temp';
+
+if ( -d $base_dir || -d $tmp_dir ) {
+	my $dir_suffix = '-' . time() . '-' . $$;
+	$base_dir .= $dir_suffix;
+	$tmp_dir .= $dir_suffix;
+}
+mkdir($base_dir);
 mkdir($tmp_dir);
 
 die "Directory '$base_dir' not found." unless -d $base_dir;
@@ -143,7 +159,7 @@ $sc->add_slide(
  * 12,000 developers from 1200 organizations
 MD_END
 	notes => <<'MD_NOTES',
-* http://www.linuxfoundation.org/news-media/announcements/2015/02/linux-foundation-releases-linux-development-report
+* [link](http://www.linuxfoundation.org/news-media/announcements/2015/02/linux-foundation-releases-linux-development-report)
 * subsystem trees - be SCSI drivers, x86 architecture code, or networking - “Signed-off-by”
 * 75% – The share of all kernel development that is done by developers who are being paid for their work.
 * More than 7,800 developers from almost 800 different companies have contributed to the Linux kernel since tracking began in 2005
