@@ -1370,7 +1370,7 @@ $sc->add_slide(
 	'Thank you',
 	markdown => <<'MD_END',
 Michal Jurosz (mj41)<br />
-<small>[www.GoodData.com](https://www.goodgata.com)</small>
+<small>[www.GoodData.com](https://www.gooddata.com)</small>
 <br />
 <p><small>
 Generated from <a href="https://github.com/mj41/git-course-mj41">github.com/mj41/git-course-mj41</a> source<br />
